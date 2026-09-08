@@ -76,6 +76,7 @@ def load_dashboard_metadata() -> dict:
 
 
 DASHBOARD_METADATA = load_dashboard_metadata()
+TEST_DATASETS = json.loads(load_static_text(STATIC_DIR / "test_datasets.json"))
 IMAGE_DIR = STATIC_DIR / DASHBOARD_METADATA["image_dir"]
 AVAILABLE_LP_SOLVERS = ["CBC"] + (["GUROBI"] if find_spec("gurobipy") else [])
 PROBLEM_METADATA = DASHBOARD_METADATA["problems"]
@@ -241,6 +242,10 @@ def initialize_state() -> None:
 	column_mapping_defaults = defaults["column_mapping"]
 	for key, value in column_mapping_defaults.items():
 		st.session_state.column_mapping.setdefault(key, value)
+	# Hidden controls must not remain active in existing browser sessions.
+	st.session_state.objective_min_dbh = False
+	st.session_state.show_map_filter = False
+	st.session_state.selected_algorithm = "linear_programming"
 
 
 def guess_column(columns: Iterable[str], keywords: Iterable[str]) -> Optional[str]:
@@ -1627,14 +1632,15 @@ def decision_histogram(
 	cut_mask: np.ndarray,
 	bin_edges: np.ndarray,
 	x_axis_title: str,
+	decision_labels: tuple[str, str] = ("Retain", "Cut"),
 ) -> go.Figure:
 	"""Build an overlaid retained/cut histogram normalized within each decision."""
 	numeric = pd.to_numeric(values, errors="coerce").to_numpy(dtype=float)
 	finite = np.isfinite(numeric)
 	figure = go.Figure()
 	for label, decision, colour in (
-		("Retain", False, "#009E73"),
-		("Cut", True, "#D55E00"),
+		(decision_labels[0], False, "#009E73"),
+		(decision_labels[1], True, "#D55E00"),
 	):
 		group_values = numeric[finite & (cut_mask == decision)]
 		counts, _ = np.histogram(group_values, bins=bin_edges)
@@ -1662,13 +1668,14 @@ def decision_histogram(
 def species_decision_histogram(
 	values: pd.Series,
 	cut_mask: np.ndarray,
+	decision_labels: tuple[str, str] = ("Retain", "Cut"),
 ) -> go.Figure:
 	"""Build an overlaid current species frequency histogram."""
 	labels = sorted(values.dropna().astype(str).unique().tolist())
 	figure = go.Figure()
 	for label, decision, colour in (
-		("Retain", False, "#009E73"),
-		("Cut", True, "#D55E00"),
+		(decision_labels[0], False, "#009E73"),
+		(decision_labels[1], True, "#D55E00"),
 	):
 		counts = [int(((values.astype(str) == species) & (cut_mask == decision)).sum()) for species in labels]
 		figure.add_bar(x=labels, y=counts, name=label, marker_color=colour, opacity=0.55)
@@ -1860,6 +1867,11 @@ def render_stand_optimisation_results(
 
 def render_result_diagnostics(dataset: SingleTreeDataset, results: dict) -> None:
 	"""Render DBH and species decision distributions for any treatment."""
+	decision_labels = (
+		("Not selected", "Selected")
+		if results.get("treatment_type") == "future_crop_tree_selection"
+		else ("Retain", "Cut")
+	)
 	decision_vector = np.asarray(results.get("decision_vector", []), dtype=bool)
 	if decision_vector.size != dataset._n_trees:
 		return
@@ -1878,12 +1890,12 @@ def render_result_diagnostics(dataset: SingleTreeDataset, results: dict) -> None
 				start = 5.0 * np.floor(float(values[finite].min()) / 5.0)
 				end = max(start + 5.0, 5.0 * np.ceil(float(values[finite].max()) / 5.0))
 				st.plotly_chart(decision_histogram(
-					values, decision_vector, np.arange(start, end + 5.0, 5.0), "DBH (cm)"),
+					values, decision_vector, np.arange(start, end + 5.0, 5.0), "DBH (cm)", decision_labels),
 					use_container_width=True, key="dbh-result-diagnostic")
 	with columns[1]:
 		if species_column and species_column in data.columns:
 			st.plotly_chart(species_decision_histogram(
-				data[species_column], decision_vector),
+				data[species_column], decision_vector, decision_labels),
 				use_container_width=True, key="species-result-diagnostic")
 
 
@@ -2259,8 +2271,9 @@ def render_problem_section() -> None:
 
 def render_algorithm_choices() -> None:
 	"""Render algorithm cards backed by the central algorithm registry."""
-	algorithm_cols = st.columns(len(ALGORITHM_METADATA))
-	for idx, (algorithm_key, algorithm) in enumerate(ALGORITHM_METADATA.items()):
+	visible_algorithms = {"linear_programming": ALGORITHM_METADATA["linear_programming"]}
+	algorithm_cols = st.columns(len(visible_algorithms))
+	for idx, (algorithm_key, algorithm) in enumerate(visible_algorithms.items()):
 		disabled = not algorithm["supported"]
 		with algorithm_cols[idx]:
 			render_choice_card(
@@ -2333,17 +2346,46 @@ def render_objective_weights() -> dict[str, float]:
 	return {}
 
 
+def select_data_source(source: str) -> None:
+	"""Switch inventories without carrying over mappings, layers or results."""
+	st.session_state.data_source = source
+	st.session_state.column_mapping = {}
+	st.session_state.epsg_text = ""
+	for key in list(st.session_state):
+		if key.startswith(("optimisation_", "desired_", "thinning_")) or key in {
+			"id_column", "x_column", "y_column", "dbh_column", "species_column",
+			"social_status_column", "is_alive_column", "wood_quality_column", "volume_column",
+			"stand_shapefile_upload", "water_shapefile_upload", "roads_geopackage_upload",
+			"stand_shapefile_bytes", "water_shapefile_bytes", "roads_gpkg_bytes",
+			"stand_shapefile_name", "water_shapefile_name", "roads_gpkg_name", "spatial_validation",
+		}:
+			st.session_state.pop(key, None)
+	for key in ("objective_social_status", "objective_wood_quality", "objective_min_dbh", "objective_min_volume"):
+		st.session_state[key] = False
+	if source in TEST_DATASETS:
+		preset = TEST_DATASETS[source]
+		st.session_state.column_mapping = preset["mapping"].copy()
+		st.session_state.epsg_text = preset["epsg"]
+
+
 def render_upload_section() -> Optional[pd.DataFrame]:
 	st.markdown("<div class='step-title'>0. Upload data</div>", unsafe_allow_html=True)
-	upload_col, epsg_col = st.columns(2)
+	upload_col, examples_col, epsg_col = st.columns([2, 2, 1])
 	with upload_col:
-		uploaded_file = st.file_uploader("Upload your data", type=["csv"], help="Select a CSV file from your computer.")
+		uploaded_file = st.file_uploader(
+			"Upload your data, or select one of the test datasets.", type=["csv"],
+			key="tree_csv_upload", on_change=select_data_source, args=("upload",),
+			help="Select a CSV file from your computer.",
+		)
+	with examples_col:
+		for key, preset in TEST_DATASETS.items():
+			st.button(preset["label"], key=f"example_{key}", on_click=select_data_source,
+				args=(key,), use_container_width=True)
 	with epsg_col:
-		st.session_state.epsg_text = st.text_input(
-			"Enter the EPSG code for the uploaded coordinates",
-			value=st.session_state.epsg_text,
+		st.text_input(
+			"Enter the EPSG code for the coordinates", key="epsg_text",
 			placeholder="e.g. 2056, 25830, 32632",
-		).strip()
+		)
 
 	if st.session_state.selected_problem not in SUPPORTED_PROBLEMS:
 		st.session_state.selected_problem = "future_crop_tree_selection"
@@ -2351,7 +2393,15 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 		st.session_state.selected_algorithm = "linear_programming"
 
 	df: Optional[pd.DataFrame] = None
-	if uploaded_file is not None:
+	source = st.session_state.get("data_source", "upload")
+	if source in TEST_DATASETS:
+		preset = TEST_DATASETS[source]
+		try:
+			df = read_csv_bytes((TOOL_DIR / "data/examples" / preset["file"]).read_bytes())
+			st.caption(f"Selected dataset: {preset['label']} ({len(df):,} trees)")
+		except Exception as exc:
+			st.error(f"Unable to load the test dataset: {exc}")
+	elif uploaded_file is not None:
 		try:
 			df = safe_read_csv(uploaded_file)
 		except Exception as exc:
@@ -2364,7 +2414,7 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 
 		left, right = st.columns([1, 1.08])
 		with right:
-			st.caption("First five rows from the uploaded file.")
+			st.caption("Data preview")
 			st.dataframe(df.head(5), use_container_width=True)
 
 		columns = [str(column) for column in df.columns.tolist()]
@@ -2419,7 +2469,7 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 					"Height of lowest living branch", "Stem defects", "Whorl positions",
 					"Branch size", "Cavities", "Crown structure complexity",
 				]
-				st.markdown("##### Planned attributes")
+				st.markdown("##### Planned attributes (WP1)")
 				placeholder_rows = [st.columns(3) for _ in range(3)]
 				for index, label in enumerate(placeholder_labels):
 					with placeholder_rows[index // 3][index % 3]:
@@ -2429,41 +2479,10 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 							unsafe_allow_html=True,
 						)
 
-			st.checkbox(
-				"Map preview and polygon filtering",
-				key="show_map_filter",
-				help=(
-					"Render a Folium map and optionally draw a polygon to filter the uploaded trees. "
-					"Warning: rendering and spatially filtering large inventories can be "
-					"computationally intensive and may make the dashboard slow or unresponsive."
-				),
-			)
-			if st.session_state.show_map_filter:
-				st.markdown("#### Tree locations")
-				if (
-					st.session_state.epsg_text
-					and st.session_state.column_mapping.get("x_coord")
-					and st.session_state.column_mapping.get("y_coord")
-				):
-					try:
-						epsg_code = int(st.session_state.epsg_text)
-						filtered_df = render_folium_map(
-							df,
-							st.session_state.column_mapping["x_coord"],
-							st.session_state.column_mapping["y_coord"],
-							epsg_code,
-						)
-						df = filtered_df
-					except ValueError:
-						st.warning("Please type a numeric EPSG code to show the map.")
-					except Exception as exc:
-						st.warning(f"Unable to render the map yet: {exc}")
-				else:
-					st.info("Choose the X and Y columns, then enter an EPSG code to see the folium map.")
 
 		st.markdown("</div>", unsafe_allow_html=True)
 	else:
-		st.info("Upload a CSV file to continue.")
+		st.info("Upload a CSV file or select a test dataset to continue.")
 
 	return df
 
@@ -2612,12 +2631,7 @@ def render_objectives_constraints_section(
 			disabled=not wood_quality_required,
 			help='Prefer trees with high wood quality.\n\nRequires the `wood_quality` column.',
 		)
-		st.checkbox(
-			"Minimise DBH",
-			key="objective_min_dbh",
-			disabled=not bool(st.session_state.column_mapping.get("dbh")),
-			help='Select smaller trees, which usually have higher growth potential.\n\nRequires the `dbh` column.',
-		)
+
 
 	with objective_cols[1]:
 		st.subheader("Biodiversity")

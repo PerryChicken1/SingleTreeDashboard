@@ -2,9 +2,10 @@
 
 This repository is a release snapshot of the SingleTree Streamlit dashboard.
 It contains application code, runtime assets, pinned Python dependencies, and
-a deployment smoke check. Research datasets, notebooks, experiment outputs,
+a deployment smoke check. Two example inventories (Basel and Evo) are bundled
+under `data/examples`, with preset mappings and coordinate systems. Other research datasets, notebooks, experiment outputs,
 virtual environments, licences, and the development repository's history are
-not included. Visitors supply their own data through the dashboard's uploads.
+not included. Visitors can select an example or supply their own CSV.
 
 ## Run locally
 
