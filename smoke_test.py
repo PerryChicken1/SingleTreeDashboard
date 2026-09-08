@@ -66,6 +66,8 @@ def main():
     assert not app.exception, [item.message for item in app.exception]
     assert app.session_state["lp_solver"] in dashboard.AVAILABLE_LP_SOLVERS
     assert app.session_state["lp_solver"] == "CBC"
+    assert not app.get("file_uploader")
+    assert not any(item.key == "epsg_text" for item in app.text_input)
     app.selectbox(key="lp_solver").select("GUROBI").run()
     assert not app.exception
     for key in ("gurobi_wls_access_id", "gurobi_wls_secret"):
@@ -82,8 +84,23 @@ def main():
     app.button(key="example_basel").click().run()
     assert not app.exception, [item.message for item in app.exception]
     assert app.session_state["epsg_text"] == "2056"
+    assert app.session_state["selected_problem"] == "future_crop_tree_selection"
+    assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert app.button(key="problem_thinning_treatment").disabled
+    assert not app.button(key="problem_future_crop_tree_selection").disabled
+    assert "problem_risk_mitigation" not in {item.key for item in app.button}
+    assert not app.get("file_uploader")
+    assert not any(item.key == "epsg_text" for item in app.text_input)
+    for key, column in {
+        "id_column": "Tree ID", "x_column": "X-coord. [m]", "y_column": "Y-coord. [m]",
+        "dbh_column": "DBH[cm]", "social_status_column": "Social status", "is_alive_column": "Alive",
+    }.items():
+        app.selectbox(key=key).select(column)
+    app.run()
+    assert not app.exception, [item.message for item in app.exception]
     assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
-    assert app.session_state["column_mapping"]["x_coord"] == "X-coord. [m]"
+    app.run()
+    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
     assert any(item.value == "Data preview" for item in app.caption)
     assert any("Planned attributes (WP1)" in item.value for item in app.markdown)
     assert not any(item.label in {"Minimise DBH", "Map preview and polygon filtering"} for item in app.checkbox)
@@ -96,14 +113,24 @@ def main():
     app.button(key="example_evo").click().run()
     assert not app.exception, [item.message for item in app.exception]
     assert app.session_state["epsg_text"] == "3067"
-    assert app.session_state["column_mapping"]["x_coord"] == "LX"
-    assert app.session_state["column_mapping"]["volume"] == "Volume"
-    assert app.session_state["column_mapping"]["social_status"] is None
+    assert app.session_state["selected_problem"] == "thinning_treatment"
+    assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert app.button(key="problem_future_crop_tree_selection").disabled
+    assert not app.button(key="problem_thinning_treatment").disabled
+    assert not app.get("file_uploader")
+    assert app.session_state["water_shapefile_bytes"]
+    assert app.session_state["roads_gpkg_bytes"]
+    assert app.session_state["stand_shapefile_bytes"] is None
+    bundled_water = ROOT / "data/examples/evo_layers/Water-bodies-selected-area.shp"
+    assert gpd.read_file(bundled_water).crs.to_epsg() == 3067
+    assert dashboard.read_roads_geopackage(app.session_state["roads_gpkg_bytes"]).crs.to_epsg() == 3067
     assert app.session_state["optimisation_results"] is None
     app.button(key="example_basel").click().run()
     assert not app.exception, [item.message for item in app.exception]
-    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
-    assert app.session_state["column_mapping"]["volume"] is None
+    assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert app.session_state["water_shapefile_bytes"] is None
+    assert app.session_state["roads_gpkg_bytes"] is None
+    assert app.session_state["selected_problem"] == "future_crop_tree_selection"
     for labels in (("Not selected", "Selected"), ("Retain", "Cut")):
         for figure in (
             dashboard.decision_histogram(pd.Series([10., 20.]), np.array([False, True]), np.array([0., 15., 30.]), "DBH", labels),
