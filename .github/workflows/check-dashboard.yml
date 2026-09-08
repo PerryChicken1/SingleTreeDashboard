@@ -17,3 +17,4 @@ jobs:
       - run: python -m pip check
       - run: python smoke_test.py
       - run: python -m unittest test_gurobi_wls.py
+      - run: python -m unittest test_metadata_reload.py

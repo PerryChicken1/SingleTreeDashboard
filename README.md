@@ -60,7 +60,11 @@ Official instructions: https://docs.streamlit.io/deploy/streamlit-community-clou
 `production` is the published version. Push release candidates to a separate
 branch, such as `release/2026-09-08`, and open a pull request into `production`.
 Inspect the diff, wait for `smoke-test` to pass, then merge only when ready to
-update the website. A push to an unrelated branch does not update production.
+update the website. After merging, use **Manage app → Reboot app** in Streamlit
+Community Cloud, then refresh the browser. Production file watching is disabled
+to avoid import races while Git replaces modules during a release. Rebooting
+loads the whole new version together and resets existing sessions. A push to
+an unrelated branch does not update production.
 Do not enable automatic merging for release pull requests.
 
 Protect `production` with required pull requests and the `smoke-test` status
@@ -74,7 +78,7 @@ the source HEAD and exported file hashes; snapshots may include uncommitted
 source changes, so commit source work first for clearer traceability.
 
 For rollback, revert the release merge using a new pull request into
-`production`. Merging the revert redeploys the previous code. Keep dependency
+`production`, then reboot the Streamlit app. This restores the previous code. Keep dependency
 changes in the same release as the code that needs them.
 
 Community Cloud has finite memory/CPU and sleeps after inactivity. This is a

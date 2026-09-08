@@ -2,15 +2,15 @@
   "source_commit": "2bc685a3d58debc556fefb565a30f344372337e9",
   "source": "Working-tree snapshot; may include changes beyond source_commit.",
   "sha256": {
-    ".github/workflows/check-dashboard.yml": "026259a2315d9bd753e5c78fdcafa7f16f75c5b06d357216185a4bcc8cc9a89b",
-    ".streamlit/config.toml": "4e3eb918d3de165e96dede36a01fc46c94e34c08f523d613258f9d22b0ef9499",
+    ".github/workflows/check-dashboard.yml": "1bd83fa80c30196b54d9b5754aef556e0dba5bbb5dc72cf11c1654b1e4cdef99",
+    ".streamlit/config.toml": "67ebca4f2ae71c0ef957b98b28c7c6686127e7bed4dddafdbddce5eb9416525d",
     "Constraints.py": "57edccacaafd35cd6f4a36aee59ee5439f9c0e19653a882e5fbd9cacc001ef78",
-    "Dashboard.py": "3be61f8e33384eba60ea1bc74d9836089f716804e22c58935b57f043b47c7b72",
+    "Dashboard.py": "9cccdbaa92463f0f2f49850b240dd9beb12c545f294a819c258793aa1aa4c8d2",
     "DecisionScope.py": "ad93d7ca112d1abc8c01d3f59a7d4c3cea55e169182740ad562ddd5ef3920ab7",
     "GurobiLicense.py": "838c5756da14f902d02ae8f0de81fa8696a795c33a7575ff27eeb5d89f8f35b2",
     "Objectives.py": "a3cd9e5c74adebc263e7ddc8aa368784ea955982242a6be26e749f97f53292bc",
     "Optimiser.py": "4d602e67906bb9f9987af304611061dee585a6d54a853eac6fc9ad0ca387fbb3",
-    "README.md": "bf62c157c3afa13893cde106b3c4cbe37ad2ae081b4b83e3b23cb2b48bd1766f",
+    "README.md": "7eb2afcbaf1f0ef1455678013424aa18e29a6e87a35150d7d5d8d52d378315e9",
     "SingleTreeAlgorithms.py": "bcb6fc240f7e86c8a6644da7f387177a44e5cacea41196362da3a1e6a296b7e1",
     "SingleTreeDataset.py": "1a7d1a8be3c81279255ff5b3ced136c9c104d552fe0749f4d94b2ad810b65fa0",
     "app/components/__init__.py": "5a8a08d95ddf5a032f53db3164f9be40278a84984c941e14f9e012682067e791",
@@ -42,6 +42,7 @@
     "data/examples/evo_layers/skid_roads.gpkg": "07a393833becfe5c5f885bbf87c69345188fafe8dd46dd54ce5a03ad6f3915bf",
     "requirements.txt": "fcd7dfdeb1dd8c187aa8e02f5264908fe665ca9b4008cb7414810e44a159fae2",
     "smoke_test.py": "b03869d51b6781d1f1c6928571fbccc0f06756beb365ab14f4580288cbc2824b",
-    "test_gurobi_wls.py": "1d1e2ee3cde9e7711ce903cbae9b60c9263611cf1d3d4a491581808936085f10"
+    "test_gurobi_wls.py": "1d1e2ee3cde9e7711ce903cbae9b60c9263611cf1d3d4a491581808936085f10",
+    "test_metadata_reload.py": "a7ff68823606e1d047b69b9dab64b6fac38b7e9f64a99418309c0aaee831fee2"
   }
 }

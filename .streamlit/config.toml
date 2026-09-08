@@ -1,5 +1,7 @@
 [server]
 headless = true
+# Deployments are activated by an app reboot, avoiding concurrent module reloads.
+fileWatcherType = "none"
 
 [browser]
 gatherUsageStats = false

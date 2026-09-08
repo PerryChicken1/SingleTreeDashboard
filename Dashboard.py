@@ -63,15 +63,13 @@ st.set_page_config(
 STATIC_DIR = APP_DIR / "static"
 
 
-@st.cache_data
 def load_static_text(path: Path) -> str:
-	"""Load a static dashboard file once per Streamlit process."""
+	"""Read current release assets; path-only caching survives file updates."""
 	return path.read_text(encoding="utf-8")
 
 
-@st.cache_data
 def load_dashboard_metadata() -> dict:
-	"""Load static dashboard metadata once per Streamlit process."""
+	"""Read current metadata on each rerun so releases cannot reuse old schemas."""
 	return json.loads(load_static_text(STATIC_DIR / "metadata.json"))
 
 
