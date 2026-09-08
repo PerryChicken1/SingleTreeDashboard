@@ -86,13 +86,15 @@ def main():
     assert app.session_state["epsg_text"] == "2056"
     assert app.session_state["selected_problem"] == "future_crop_tree_selection"
     assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert all(item.value == "Not set" for item in app.selectbox if item.key and item.key.endswith("_column"))
+    assert not any(item.value.startswith("Selected dataset:") for item in app.caption)
     assert app.button(key="problem_thinning_treatment").disabled
     assert not app.button(key="problem_future_crop_tree_selection").disabled
     assert "problem_risk_mitigation" not in {item.key for item in app.button}
     assert not app.get("file_uploader")
     assert not any(item.key == "epsg_text" for item in app.text_input)
     for key, column in {
-        "id_column": "Tree ID", "x_column": "X-coord. [m]", "y_column": "Y-coord. [m]",
+        "id_column": "ID", "x_column": "X-coord. [m]", "y_column": "Y-coord. [m]",
         "dbh_column": "DBH[cm]", "social_status_column": "Social status", "is_alive_column": "Alive",
     }.items():
         app.selectbox(key=key).select(column)
@@ -115,6 +117,8 @@ def main():
     assert app.session_state["epsg_text"] == "3067"
     assert app.session_state["selected_problem"] == "thinning_treatment"
     assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert all(item.value == "Not set" for item in app.selectbox if item.key and item.key.endswith("_column"))
+    assert not any(item.value.startswith("Selected dataset:") for item in app.caption)
     assert app.button(key="problem_future_crop_tree_selection").disabled
     assert not app.button(key="problem_thinning_treatment").disabled
     assert not app.get("file_uploader")
@@ -125,12 +129,19 @@ def main():
     assert gpd.read_file(bundled_water).crs.to_epsg() == 3067
     assert dashboard.read_roads_geopackage(app.session_state["roads_gpkg_bytes"]).crs.to_epsg() == 3067
     assert app.session_state["optimisation_results"] is None
+    app.selectbox(key="id_column").select("ID").run()
     app.button(key="example_basel").click().run()
     assert not app.exception, [item.message for item in app.exception]
     assert all(value is None for value in app.session_state["column_mapping"].values())
+    assert all(item.value == "Not set" for item in app.selectbox if item.key and item.key.endswith("_column"))
+    assert not any(item.value.startswith("Selected dataset:") for item in app.caption)
     assert app.session_state["water_shapefile_bytes"] is None
     assert app.session_state["roads_gpkg_bytes"] is None
     assert app.session_state["selected_problem"] == "future_crop_tree_selection"
+    app.selectbox(key="id_column").select("ID").run()
+    app.button(key="example_basel").click().run()
+    assert not app.exception
+    assert app.selectbox(key="id_column").value == "Not set"
     for labels in (("Not selected", "Selected"), ("Retain", "Cut")):
         for figure in (
             dashboard.decision_histogram(pd.Series([10., 20.]), np.array([False, True]), np.array([0., 15., 30.]), "DBH", labels),

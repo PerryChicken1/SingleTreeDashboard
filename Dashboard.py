@@ -2286,6 +2286,10 @@ def select_data_source(source: Optional[str]) -> None:
 			"stand_shapefile_name", "water_shapefile_name", "roads_gpkg_name", "spatial_validation",
 		}:
 			st.session_state.pop(key, None)
+	# Set widget values explicitly: deleting keys can restore browser-side selections.
+	for key in ("id_column", "x_column", "y_column", "dbh_column", "species_column",
+		"social_status_column", "is_alive_column", "wood_quality_column", "volume_column"):
+		st.session_state[key] = "Not set"
 	for key in ("objective_social_status", "objective_wood_quality", "objective_min_dbh", "objective_min_volume"):
 		st.session_state[key] = False
 	if source in TEST_DATASETS:
@@ -2310,7 +2314,6 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 		preset = TEST_DATASETS[source]
 		try:
 			df = read_csv_bytes((TOOL_DIR / "data/examples" / preset["file"]).read_bytes())
-			st.caption(f"Selected dataset: {preset['label']} ({len(df):,} trees)")
 		except Exception as exc:
 			st.error(f"Unable to load the test dataset: {exc}")
 
