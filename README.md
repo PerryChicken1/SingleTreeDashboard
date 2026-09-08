@@ -3,9 +3,12 @@
 This repository is a release snapshot of the SingleTree Streamlit dashboard.
 It contains application code, runtime assets, pinned Python dependencies, and
 a deployment smoke check. Two example inventories (Basel and Evo) are bundled
-under `data/examples`, with preset mappings and coordinate systems. Other research datasets, notebooks, experiment outputs,
+under `data/examples`, with fixed coordinate systems and manual attribute mapping. Evo's
+water bodies and skid roads are bundled too. Other research datasets, notebooks, experiment outputs,
 virtual environments, licences, and the development repository's history are
-not included. Visitors can select an example or supply their own CSV.
+not included. Visitors select Basel for future crop tree selection or Evo for
+thinning from below. Custom data uploads, EPSG entry and thinning from above are
+not available in this public version. Every attribute dropdown starts at Not set.
 
 ## Run locally
 
@@ -76,5 +79,5 @@ changes in the same release as the code that needs them.
 
 Community Cloud has finite memory/CPU and sleeps after inactivity. This is a
 public demo deployment, not a guarantee of capacity for large simultaneous
-optimisation runs. Uploaded data and results are session-based; use Download
+optimisation runs. Data selections and results are session-based; use Download
 results for a CSV. This snapshot does not offer permanent user storage.

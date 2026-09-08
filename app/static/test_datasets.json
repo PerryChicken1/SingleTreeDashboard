@@ -3,21 +3,20 @@
     "label": "Case study 1: Basel, Switzerland",
     "file": "basel.csv",
     "epsg": "2056",
-    "mapping": {
-      "id": "Tree ID", "dbh": "DBH[cm]", "species": "Species",
-      "x_coord": "X-coord. [m]", "y_coord": "Y-coord. [m]",
-      "social_status": "Social status", "is_alive": "Alive",
-      "wood_quality": "Quality", "volume": null
-    }
+    "problem": "future_crop_tree_selection"
   },
   "evo": {
     "label": "Case study 2: Evo, Finland",
     "file": "evo.csv",
     "epsg": "3067",
-    "mapping": {
-      "id": "ID", "dbh": "DBH", "species": "species_name",
-      "x_coord": "LX", "y_coord": "LY", "volume": "Volume",
-      "social_status": null, "is_alive": null, "wood_quality": null
-    }
+    "problem": "thinning_treatment",
+    "water_file": "evo_layers/Water-bodies-selected-area.shp",
+    "roads_file": "evo_layers/skid_roads.gpkg",
+    "support_files": [
+      "evo_layers/Water-bodies-selected-area.cpg",
+      "evo_layers/Water-bodies-selected-area.dbf",
+      "evo_layers/Water-bodies-selected-area.prj",
+      "evo_layers/Water-bodies-selected-area.shx"
+    ]
   }
 }

@@ -142,6 +142,9 @@ CSS = f"<style>{load_static_text(STATIC_DIR / 'dashboard.css')}</style>"
 
 
 def initialize_state() -> None:
+	if st.session_state.get("_case_study_mode") != 1:
+		select_data_source(st.session_state.get("data_source"))
+		st.session_state._case_study_mode = 1
 	defaults = {
 		"selected_problem": "future_crop_tree_selection",
 		"selected_algorithm": "linear_programming",
@@ -246,17 +249,9 @@ def initialize_state() -> None:
 	st.session_state.objective_min_dbh = False
 	st.session_state.show_map_filter = False
 	st.session_state.selected_algorithm = "linear_programming"
-
-
-def guess_column(columns: Iterable[str], keywords: Iterable[str]) -> Optional[str]:
-	column_list = list(columns)
-	lowered = {column: column.lower() for column in column_list}
-	for keyword in keywords:
-		keyword_lower = keyword.lower()
-		for column in column_list:
-			if keyword_lower in lowered[column]:
-				return column
-	return None
+	preset = TEST_DATASETS.get(st.session_state.get("data_source"), {})
+	st.session_state.selected_problem = preset.get("problem")
+	st.session_state.epsg_text = preset.get("epsg", "")
 
 
 @st.cache_data(show_spinner=False)
@@ -496,6 +491,8 @@ def set_state_value(key: str, value) -> None:
 
 def select_problem(problem_key: str) -> None:
 	"""Select a treatment and clear controls that do not transfer between modes."""
+	if problem_key != TEST_DATASETS.get(st.session_state.get("data_source"), {}).get("problem"):
+		return
 	if st.session_state.get("selected_problem") != problem_key:
 		for key in (
 			"objective_social_status", "objective_wood_quality", "objective_min_dbh",
@@ -2144,110 +2141,37 @@ def validation_report(mapping: Dict[str, Optional[str]]) -> List[str]:
 
 
 def render_spatial_treatment_inputs() -> None:
-	"""Render optional stand, water and road uploads within the problem section."""
-	if not is_thinning_treatment():
+	"""Use only bundled spatial layers belonging to the selected case study."""
+	for prefix in ("stand_shapefile", "water_shapefile", "roads_gpkg"):
+		st.session_state[f"{prefix}_bytes"] = None
+		st.session_state[f"{prefix}_name"] = None
+	if st.session_state.get("data_source") != "evo":
 		return
-
-	st.markdown("#### Additional data (optional)")
-	spatial_columns = st.columns(3)
-	with spatial_columns[0]:
-		stand_upload = st.file_uploader(
-			"Stand boundaries (.shp)",
-			type=["shp"],
-			key="stand_shapefile_upload",
-			help='Polygon stand boundaries.',
-		)
-	with spatial_columns[1]:
-		water_upload = st.file_uploader(
-			"Water bodies (.shp)",
-			type=["shp"],
-			key="water_shapefile_upload",
-			help='Polygons of water bodies (lakes, ponds, rivers ...).',
-		)
-
-	with spatial_columns[2]:
-		roads_upload = st.file_uploader(
-			"Roads / skid trails (.gpkg)",
-			type=["gpkg"],
-			key="roads_geopackage_upload",
-			help="Road or skid-trail lines. Accepts skid_roads.gpkg saved by spatial_tree_filter.ipynb and uses the CRS stored in the GeoPackage.",
-		)
-	st.session_state.roads_gpkg_bytes = None
-	st.session_state.roads_gpkg_name = None
-	if roads_upload is not None:
-		try:
-			roads_bytes = roads_upload.getvalue()
-			roads = read_roads_geopackage(roads_bytes)
-			st.session_state.roads_gpkg_bytes = roads_bytes
-			st.session_state.roads_gpkg_name = roads_upload.name
-			st.caption(f"Loaded {len(roads):,} road / skid-trail feature(s) ({roads.crs}).")
-		except Exception as exc:
-			st.error(f"Unable to read roads GeoPackage: {exc}")
-
-	st.session_state.stand_shapefile_bytes = (
-		stand_upload.getvalue() if stand_upload is not None else None
-	)
-	st.session_state.stand_shapefile_name = (
-		stand_upload.name if stand_upload is not None else None
-	)
-	st.session_state.water_shapefile_bytes = (
-		water_upload.getvalue() if water_upload is not None else None
-	)
-	st.session_state.water_shapefile_name = (
-		water_upload.name if water_upload is not None else None
-	)
-
-	can_validate = (
-		(stand_upload is not None or water_upload is not None)
-		and st.session_state.epsg_text.isdigit()
-	)
-	validate_clicked = st.button(
-		"Validate inputs",
-		key="validate_spatial_inputs",
-		disabled=not can_validate,
-		help=(
-			'Checks that stands do not have a large overlap. Note that all shapefiles are assumed to have the same CRS as the dataset.'
-		),
-	)
-	if not validate_clicked:
-		return
-
+	preset = TEST_DATASETS["evo"]
 	try:
-		preview_epsg = int(st.session_state.epsg_text)
-		if stand_upload is not None:
-			preview_stands = read_geometry_shapefile(stand_upload.getvalue(), preview_epsg)
-			preview_validation = validate_stand_boundaries(preview_stands)
-			if preview_validation["overlap_pairs"]:
-				st.warning(stand_overlap_warning(preview_validation))
-				st.dataframe(pd.DataFrame([
-					{
-						"Stand pair": (
-							f"stand_{item['stand_pair'][0] + 1:03d} / "
-							f"stand_{item['stand_pair'][1] + 1:03d}"
-						),
-						"Overlap area (m²)": item["area_m2"],
-						"Estimated maximum width (m)": item["max_width_m"],
-					}
-					for item in preview_validation["overlap_details"]
-				]), hide_index=True, use_container_width=True)
-			if not preview_validation["overlap_pairs"]:
-				st.success(
-					f"Stand geometry valid: {len(preview_stands):,} non-overlapping polygon(s)."
-				)
-		if water_upload is not None:
-			preview_water = read_geometry_shapefile(water_upload.getvalue(), preview_epsg)
-			st.success(f"Water geometry valid: {len(preview_water):,} polygon(s).")
-	except Exception as exc:
-		st.error(f"Unable to validate spatial upload: {exc}")
+		water_bytes = (TOOL_DIR / "data/examples" / preset["water_file"]).read_bytes()
+		roads_bytes = (TOOL_DIR / "data/examples" / preset["roads_file"]).read_bytes()
+		water = read_geometry_shapefile(water_bytes, int(preset["epsg"]))
+		roads = read_roads_geopackage(roads_bytes)
+		st.session_state.water_shapefile_bytes = water_bytes
+		st.session_state.water_shapefile_name = Path(preset["water_file"]).name
+		st.session_state.roads_gpkg_bytes = roads_bytes
+		st.session_state.roads_gpkg_name = Path(preset["roads_file"]).name
+		st.caption(f"Included case study layers: {len(water):,} water bodies and {len(roads):,} road features.")
+	except Exception:
+		st.error("The Evo water and road layers could not be loaded. Please contact the dashboard maintainer.")
+		st.stop()
 
 
 def render_problem_section() -> None:
 	"""Render the silvicultural-problem selection section."""
 	st.markdown("<div class='step-title'>2. Silvicultural problem</div>", unsafe_allow_html=True)
 	st.markdown("<div class='step-card'>", unsafe_allow_html=True)
-	problem_cols = st.columns(len(PROBLEM_METADATA))
-	for idx, (problem_key, problem) in enumerate(PROBLEM_METADATA.items()):
-		disabled = not problem["supported"]
+	visible_problems = {key: PROBLEM_METADATA[key] for key in ("future_crop_tree_selection", "thinning_treatment")}
+	compatible_problem = TEST_DATASETS.get(st.session_state.get("data_source"), {}).get("problem")
+	problem_cols = st.columns(len(visible_problems))
+	for idx, (problem_key, problem) in enumerate(visible_problems.items()):
+		disabled = problem_key != compatible_problem
 		with problem_cols[idx]:
 			render_choice_card(
 				title=problem["title"],
@@ -2346,8 +2270,10 @@ def render_objective_weights() -> dict[str, float]:
 	return {}
 
 
-def select_data_source(source: str) -> None:
+def select_data_source(source: Optional[str]) -> None:
 	"""Switch inventories without carrying over mappings, layers or results."""
+	if source not in TEST_DATASETS:
+		source = None
 	st.session_state.data_source = source
 	st.session_state.column_mapping = {}
 	st.session_state.epsg_text = ""
@@ -2364,33 +2290,19 @@ def select_data_source(source: str) -> None:
 		st.session_state[key] = False
 	if source in TEST_DATASETS:
 		preset = TEST_DATASETS[source]
-		st.session_state.column_mapping = preset["mapping"].copy()
 		st.session_state.epsg_text = preset["epsg"]
+		select_problem(preset["problem"])
+	else:
+		st.session_state.selected_problem = None
 
 
 def render_upload_section() -> Optional[pd.DataFrame]:
-	st.markdown("<div class='step-title'>0. Upload data</div>", unsafe_allow_html=True)
-	upload_col, examples_col, epsg_col = st.columns([2, 2, 1])
-	with upload_col:
-		uploaded_file = st.file_uploader(
-			"Upload your data, or select one of the test datasets.", type=["csv"],
-			key="tree_csv_upload", on_change=select_data_source, args=("upload",),
-			help="Select a CSV file from your computer.",
-		)
-	with examples_col:
-		for key, preset in TEST_DATASETS.items():
+	st.markdown("<div class='step-title'>0. Select a case study dataset</div>", unsafe_allow_html=True)
+	case_columns = st.columns(2)
+	for column, (key, preset) in zip(case_columns, TEST_DATASETS.items()):
+		with column:
 			st.button(preset["label"], key=f"example_{key}", on_click=select_data_source,
 				args=(key,), use_container_width=True)
-	with epsg_col:
-		st.text_input(
-			"Enter the EPSG code for the coordinates", key="epsg_text",
-			placeholder="e.g. 2056, 25830, 32632",
-		)
-
-	if st.session_state.selected_problem not in SUPPORTED_PROBLEMS:
-		st.session_state.selected_problem = "future_crop_tree_selection"
-	if st.session_state.selected_algorithm not in SUPPORTED_ALGORITHMS:
-		st.session_state.selected_algorithm = "linear_programming"
 
 	df: Optional[pd.DataFrame] = None
 	source = st.session_state.get("data_source", "upload")
@@ -2401,11 +2313,6 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 			st.caption(f"Selected dataset: {preset['label']} ({len(df):,} trees)")
 		except Exception as exc:
 			st.error(f"Unable to load the test dataset: {exc}")
-	elif uploaded_file is not None:
-		try:
-			df = safe_read_csv(uploaded_file)
-		except Exception as exc:
-			st.error(f"Unable to read that CSV file: {exc}")
 
 	st.markdown("<div class='step-title'>1. Map attributes</div>", unsafe_allow_html=True)
 
@@ -2419,23 +2326,8 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 
 		columns = [str(column) for column in df.columns.tolist()]
 		if columns:
-			for field, keywords in (
-				("id", ["tree id", "tree_id", "treeid", "id"]),
-				("dbh", ["dbh", "diameter", "diam", "d_bh"]),
-				("species", ["species", "sp", "tree species"]),
-				("x_coord", ["x", "xcoord", "x_coord", "easting"]),
-				("y_coord", ["y", "ycoord", "y_coord", "northing"]),
-				("social_status", ["social status", "social_status", "status"]),
-				("is_alive", ["alive", "is alive", "is_alive"]),
-				("wood_quality", ["wood quality", "quality", "grade"]),
-				("volume", ["volume", "vol"]),
-			):
-				if not isinstance(st.session_state.column_mapping.get(field), str):
-					st.session_state.column_mapping[field] = guess_column(columns, keywords)
-
 			role_options = ["Not set"] + columns
 			with left:
-				st.caption("Choose the tree attribute columns needed for the selected objectives and constraints.")
 				map_rows = [st.columns(4) for _ in range(3)]
 				field_specs = [
 					("id", "**Tree ID (required)**", "id_column"),
@@ -2482,7 +2374,7 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 
 		st.markdown("</div>", unsafe_allow_html=True)
 	else:
-		st.info("Upload a CSV file or select a test dataset to continue.")
+		st.info("Select a case study dataset to continue.")
 
 	return df
 
@@ -2941,7 +2833,7 @@ def main() -> None:
 				st.error(str(exc))
 				return
 		if df is None:
-			st.error("Please upload a CSV file first.")
+			st.error("Please select a case study dataset first.")
 			return
 
 		missing_roles = validation_report(st.session_state.column_mapping)
