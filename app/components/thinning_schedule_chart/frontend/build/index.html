@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{margin:0;background:transparent;font-family:"Source Sans Pro",system-ui,sans-serif;color:#16352f}
+svg{display:block;width:100%;height:330px;user-select:none}.grid{stroke:#dce5e1}.axis{stroke:#61766f;stroke-width:1.5}
+.tick{fill:#526861;font-size:12px}.title{fill:#263f38;font-size:13px;font-weight:700}.floor{stroke:#1877b9;stroke-width:2}
+.floorText{fill:#1877b9;font-size:12px;font-weight:700}.curve{fill:none;stroke:#1e5f4f;stroke-width:3}
+.start{fill:#1e5f4f}.handle{fill:#fff;stroke:#1e5f4f;stroke-width:4;cursor:ns-resize;touch-action:none}
+.value{fill:#16352f;font-size:12px;font-weight:800}
+</style>
+</head>
+<body><svg id="chart" viewBox="0 0 760 330"></svg>
+<script>
+const W=760,H=330,M={top:22,right:24,bottom:55,left:72};let n=1,current=0,floor=0,targets=[0],drag=-1;
+const svg=document.getElementById("chart"), NS="http://www.w3.org/2000/svg";
+let unitLabel="stems/ha",valueStep=1,precision=0;
+function message(type,extra={}){window.parent.postMessage({isStreamlitMessage:true,type,...extra},"*")}
+function el(tag,attrs={},text=""){const node=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,v);if(text!=="")node.textContent=text;return node}
+function sanitize(raw){const source=Array.isArray(raw)&&raw.length===n?raw.map(Number):Array(n).fill(current),out=[];for(let i=0;i<n;i++)out.push(Math.max(floor,Math.min(current,source[i])));return out}
+function x(i){return M.left+(i/n)*(W-M.left-M.right)}function y(v){return M.top+(1-v/Math.max(current,1))*(H-M.top-M.bottom)}
+function render(){svg.replaceChildren();const upper=Math.max(current,1);for(let i=0;i<5;i++){const v=upper*i/4;svg.append(el("line",{class:"grid",x1:M.left,x2:W-M.right,y1:y(v),y2:y(v)}),el("text",{class:"tick",x:M.left-10,y:y(v)+4,"text-anchor":"end"},Math.round(v)))}
+svg.append(el("line",{class:"axis",x1:M.left,x2:M.left,y1:M.top,y2:H-M.bottom}),el("line",{class:"axis",x1:M.left,x2:W-M.right,y1:H-M.bottom,y2:H-M.bottom}),el("line",{class:"floor",x1:M.left,x2:W-M.right,y1:y(floor),y2:y(floor)}),el("text",{class:"floorText",x:W-M.right,y:y(floor)-7,"text-anchor":"end"},`Future crop trees: ${floor.toFixed(precision)} ${unitLabel}`));
+const values=[current,...targets];svg.append(el("polyline",{class:"curve",points:values.map((v,i)=>`${x(i)},${y(v)}`).join(" ")}));values.forEach((v,i)=>{svg.append(el("text",{class:"tick",x:x(i),y:H-M.bottom+25,"text-anchor":"middle"},i));const c=el("circle",{class:i?"handle":"start",cx:x(i),cy:y(v),r:i?9:6,"data-index":i-1});svg.append(c,el("text",{class:"value",x:x(i),y:y(v)-14,"text-anchor":"middle"},v.toFixed(precision))) });
+svg.append(el("text",{class:"title",x:W/2,y:H-8,"text-anchor":"middle"},"Thinning treatment"),el("text",{class:"title",transform:`translate(18 ${H/2}) rotate(-90)`,"text-anchor":"middle"},`Remaining ${unitLabel}`));message("streamlit:setFrameHeight",{height:348})}
+function pointerDensity(e){const rect=svg.getBoundingClientRect(),sy=(e.clientY-rect.top)/rect.height*H;return Math.max(floor,Math.min(current,(1-(sy-M.top)/(H-M.top-M.bottom))*Math.max(current,1)))}
+function update(i,value,redraw=true){targets[i]=Math.round(Math.max(floor,Math.min(current,value))/valueStep)*valueStep;if(redraw)render()}
+function commit(e){if(drag<0)return;const index=drag;const value=pointerDensity(e);update(index,value,false);drag=-1;render();message("streamlit:setComponentValue",{value:{targets:[...targets]},dataType:"json"})}
+svg.addEventListener("pointerdown",e=>{if(e.target.classList.contains("handle")){drag=Number(e.target.dataset.index);svg.setPointerCapture(e.pointerId)}});svg.addEventListener("pointermove",e=>{if(drag>=0){update(drag,pointerDensity(e),false);const circle=svg.querySelector(`[data-index='${drag}']`);if(circle)circle.setAttribute("cy",y(targets[drag]));}});svg.addEventListener("pointerup",commit);svg.addEventListener("pointercancel",commit);
+let configuration="";
+window.addEventListener("message",e=>{if(e.data?.type!=="streamlit:render")return;const a=e.data.args||{};const nextConfiguration=[a.nThinnings,a.currentValue,a.futureCropValue,a.unitLabel,a.valueStep].join("|");if(nextConfiguration!==configuration){n=Math.max(1,Math.min(5,Number(a.nThinnings||1)));current=Math.max(0,Number(a.currentValue||0));floor=Math.max(0,Math.min(current,Number(a.futureCropValue||0)));unitLabel=String(a.unitLabel||"stems/ha");valueStep=Math.max(.001,Number(a.valueStep||1));precision=valueStep<1?1:0;targets=sanitize(a.targets);configuration=nextConfiguration;render()}});
+message("streamlit:componentReady",{apiVersion:1});
+</script></body></html>

@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Objective Weight Slider</title>
+		<style>
+			:root {
+				color: #16352f;
+				font-family: "Source Sans Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			}
+
+			body {
+				margin: 0;
+				background: transparent;
+				min-height: 132px;
+			}
+
+			#root {
+				min-height: 132px;
+			}
+
+			.slider-shell {
+				padding: 14px 8px 18px;
+			}
+
+			.slider-actions {
+				display: flex;
+				justify-content: flex-end;
+				margin: 0 8px 4px;
+			}
+
+			.equal-button {
+				border: 1px solid rgba(22, 53, 47, 0.14);
+				border-radius: 8px;
+				background: rgba(255, 255, 255, 0.78);
+				color: #1e5f4f;
+				cursor: pointer;
+				font: inherit;
+				font-size: 0.82rem;
+				font-weight: 700;
+				padding: 6px 10px;
+			}
+
+			.equal-button:hover,
+			.equal-button:focus-visible {
+				border-color: #1e5f4f;
+				background: rgba(30, 95, 79, 0.08);
+				outline: none;
+			}
+
+			.track-wrap {
+				position: relative;
+				height: 44px;
+				margin: 0 12px;
+			}
+
+			.track {
+				position: absolute;
+				inset: 17px 0 auto;
+				height: 10px;
+				overflow: hidden;
+				border-radius: 999px;
+				background: #d9e2dc;
+				box-shadow: inset 0 1px 2px rgba(22, 53, 47, 0.2);
+			}
+
+			.segment {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+			}
+
+			.handle {
+				position: absolute;
+				top: 7px;
+				width: 30px;
+				height: 30px;
+				transform: translateX(-50%);
+				border: 3px solid #ffffff;
+				border-radius: 999px;
+				background: #1e5f4f;
+				box-shadow: 0 7px 18px rgba(22, 53, 47, 0.28);
+				cursor: grab;
+				touch-action: none;
+			}
+
+			.handle:focus-visible {
+				outline: 3px solid rgba(30, 95, 79, 0.32);
+				outline-offset: 3px;
+			}
+
+			.handle:active {
+				cursor: grabbing;
+			}
+
+			.labels {
+				display: grid;
+				gap: 8px;
+				grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+				margin-top: 8px;
+			}
+
+			.label {
+				min-width: 0;
+				border: 1px solid rgba(22, 53, 47, 0.1);
+				border-radius: 8px;
+				background: rgba(255, 255, 255, 0.72);
+				padding: 8px 10px;
+			}
+
+			.label-row {
+				display: flex;
+				align-items: center;
+				gap: 7px;
+				min-width: 0;
+			}
+
+			.label-color {
+				flex: 0 0 auto;
+				width: 4px;
+				height: 24px;
+				border-radius: 999px;
+			}
+
+			.label-name {
+				min-width: 0;
+				overflow: hidden;
+				color: #456159;
+				font-size: 0.78rem;
+				font-weight: 700;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.label-weight {
+				margin-top: 4px;
+				padding-left: 11px;
+				color: #16352f;
+				font-size: 1.05rem;
+				font-weight: 800;
+				line-height: 1.1;
+			}
+
+			.label-percentage {
+				color: #456159;
+				font-size: 0.9rem;
+				font-weight: 700;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script>
+			const COLORS = ["#1e5f4f", "#c6a24c", "#5b7f95", "#8d6b58", "#7b8f4d", "#6f6a9f"];
+			const root = document.getElementById("root");
+			let args = {};
+			let markers = [];
+			let draggingIndex = null;
+			let activeTrackWrap = null;
+
+			function sendMessage(type, data) {
+				window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*");
+			}
+
+			function setFrameHeight() {
+				const height = Math.max(132, document.body.scrollHeight);
+				sendMessage("streamlit:setFrameHeight", { height });
+				window.requestAnimationFrame(() => {
+					sendMessage("streamlit:setFrameHeight", { height: Math.max(132, document.body.scrollHeight) });
+				});
+				window.setTimeout(() => {
+					sendMessage("streamlit:setFrameHeight", { height: Math.max(132, document.body.scrollHeight) });
+				}, 50);
+			}
+
+			function setComponentValue(value) {
+				sendMessage("streamlit:setComponentValue", { value });
+			}
+
+			function clamp(value, min, max) {
+				return Math.max(min, Math.min(max, value));
+			}
+
+			function roundToStep(value) {
+				const step = Number(args.step || 0.001);
+				return clamp(Math.round(value / step) * step, 0, 1);
+			}
+
+			function weightsFromMarkers() {
+				const points = [0, ...markers, 1];
+				const weights = [];
+				for (let index = 0; index < points.length - 1; index += 1) {
+					weights.push(Number((points[index + 1] - points[index]).toFixed(6)));
+				}
+				weights[weights.length - 1] = Number((1 - weights.slice(0, -1).reduce((sum, value) => sum + value, 0)).toFixed(6));
+				return weights;
+			}
+
+			function equalMarkers(count) {
+				return Array.from({ length: Math.max(0, count - 1) }, (_, index) => (index + 1) / count);
+			}
+
+			function isValidMarkerSet(nextMarkers, objectiveCount) {
+				if (!Array.isArray(nextMarkers) || nextMarkers.length !== Math.max(0, objectiveCount - 1)) {
+					return false;
+				}
+				if (!nextMarkers.every((marker) => Number.isFinite(marker) && marker >= 0 && marker <= 1)) {
+					return false;
+				}
+				for (let index = 1; index < nextMarkers.length; index += 1) {
+					if (nextMarkers[index] <= nextMarkers[index - 1]) {
+						return false;
+					}
+				}
+				const points = [0, ...nextMarkers, 1];
+				return points.some((point, index) => index > 0 && point - points[index - 1] > 0);
+			}
+
+			function sanitizeMarkers(nextMarkers, objectiveCount) {
+				const cleanMarkers = Array.isArray(nextMarkers)
+					? nextMarkers.map(Number).filter(Number.isFinite).map((marker) => clamp(marker, 0, 1)).sort((a, b) => a - b)
+					: [];
+				if (isValidMarkerSet(cleanMarkers, objectiveCount)) {
+					return cleanMarkers;
+				}
+				return equalMarkers(objectiveCount);
+			}
+
+			function valuePayload() {
+				const objectives = args.objectives || [];
+				const weights = weightsFromMarkers();
+				return {
+					markers: markers.map((marker) => Number(marker.toFixed(6))),
+					weights: Object.fromEntries(objectives.map((objective, index) => [objective, weights[index] || 0])),
+				};
+			}
+
+			function commitValue() {
+				setComponentValue(valuePayload());
+			}
+
+			function resetToEqualWeights() {
+				markers = equalMarkers((args.objectives || []).length);
+				render();
+				commitValue();
+			}
+
+			function constrainMarker(index, value) {
+				const minWeight = Number(args.minWeight || 0);
+				const lower = index === 0 ? minWeight : markers[index - 1] + minWeight;
+				const upper = index === markers.length - 1 ? 1 - minWeight : markers[index + 1] - minWeight;
+				return roundToStep(clamp(value, lower, upper));
+			}
+
+			function markerFromEvent(event, trackWrap, fallbackValue = 0) {
+				if (!trackWrap) {
+					return fallbackValue;
+				}
+				const rect = trackWrap.getBoundingClientRect();
+				if (!Number.isFinite(rect.width) || rect.width <= 0) {
+					return fallbackValue;
+				}
+				const value = (event.clientX - rect.left) / rect.width;
+				return Number.isFinite(value) ? clamp(value, 0, 1) : fallbackValue;
+			}
+
+			function updateMarker(index, value, commit = false) {
+				markers[index] = constrainMarker(index, value);
+				render();
+				if (draggingIndex !== null) {
+					activeTrackWrap = root.querySelector(".track-wrap");
+				}
+				if (commit) {
+					commitValue();
+				}
+			}
+
+			function handleDocumentPointerMove(event) {
+				if (draggingIndex === null || activeTrackWrap === null) {
+					return;
+				}
+				const liveTrackWrap = root.querySelector(".track-wrap") || activeTrackWrap;
+				updateMarker(draggingIndex, markerFromEvent(event, liveTrackWrap, markers[draggingIndex]));
+			}
+
+			function stopDrag(event) {
+				if (draggingIndex !== null && activeTrackWrap !== null) {
+					const liveTrackWrap = root.querySelector(".track-wrap") || activeTrackWrap;
+					updateMarker(draggingIndex, markerFromEvent(event, liveTrackWrap, markers[draggingIndex]), true);
+				}
+				cancelDrag();
+			}
+
+			function cancelDrag() {
+				draggingIndex = null;
+				activeTrackWrap = null;
+				document.removeEventListener("pointermove", handleDocumentPointerMove);
+				document.removeEventListener("pointerup", stopDrag);
+				document.removeEventListener("pointercancel", stopDrag);
+				document.removeEventListener("mouseleave", cancelDrag);
+				window.removeEventListener("blur", cancelDrag);
+			}
+
+			function startDrag(index, trackWrap, event) {
+				event.preventDefault();
+				draggingIndex = index;
+				activeTrackWrap = root.querySelector(".track-wrap") || trackWrap;
+				document.addEventListener("pointermove", handleDocumentPointerMove);
+				document.addEventListener("pointerup", stopDrag);
+				document.addEventListener("pointercancel", stopDrag);
+				document.addEventListener("mouseleave", cancelDrag);
+				window.addEventListener("blur", cancelDrag);
+			}
+
+			function render() {
+				const objectives = args.objectives || [];
+				const labels = args.labels || objectives;
+				const weights = weightsFromMarkers();
+				const colors = Array.isArray(args.colors) && args.colors.length ? args.colors : COLORS;
+				const valueScale = Number(args.valueScale || 1);
+				const valueSuffix = String(args.valueSuffix || "");
+				const showPercentage = Boolean(args.showPercentage || false);
+				const boundaryBand = clamp(Number(args.boundaryBand || 0), 0, 1);
+				const boundaryColors = Array.isArray(args.boundaryColors) && args.boundaryColors.length >= 2 ? args.boundaryColors : colors;
+
+				root.innerHTML = "";
+				const shell = document.createElement("div");
+				shell.className = "slider-shell";
+
+				const actions = document.createElement("div");
+				actions.className = "slider-actions";
+				const equalButton = document.createElement("button");
+				equalButton.className = "equal-button";
+				equalButton.type = "button";
+				equalButton.textContent = "Equal weights";
+				equalButton.addEventListener("click", resetToEqualWeights);
+				actions.appendChild(equalButton);
+				if (args.showEqualButton !== false) shell.appendChild(actions);
+
+				const trackWrap = document.createElement("div");
+				trackWrap.className = "track-wrap";
+
+				const track = document.createElement("div");
+				track.className = "track";
+
+				const points = [0, ...markers, 1];
+				for (let index = 0; index < objectives.length; index += 1) {
+					const segment = document.createElement("div");
+					segment.className = "segment";
+					segment.style.left = `${points[index] * 100}%`;
+					segment.style.width = `${(points[index + 1] - points[index]) * 100}%`;
+					segment.style.background = colors[index % colors.length];
+					track.appendChild(segment);
+				}
+				if (markers.length === 1 && boundaryBand > 0) {
+					const boundary = markers[0];
+					const leftStart = Math.max(0, boundary - boundaryBand / 2);
+					const rightEnd = Math.min(1, boundary + boundaryBand / 2);
+					const leftBand = document.createElement("div");
+					leftBand.className = "segment";
+					leftBand.style.left = `${leftStart * 100}%`;
+					leftBand.style.width = `${(boundary - leftStart) * 100}%`;
+					leftBand.style.background = boundaryColors[0];
+					track.appendChild(leftBand);
+					const rightBand = document.createElement("div");
+					rightBand.className = "segment";
+					rightBand.style.left = `${boundary * 100}%`;
+					rightBand.style.width = `${(rightEnd - boundary) * 100}%`;
+					rightBand.style.background = boundaryColors[1];
+					track.appendChild(rightBand);
+				}
+
+				trackWrap.appendChild(track);
+
+				markers.forEach((marker, index) => {
+					const handle = document.createElement("button");
+					handle.className = "handle";
+					handle.type = "button";
+					handle.style.left = `${marker * 100}%`;
+					handle.setAttribute("aria-label", `Adjust boundary ${index + 1}`);
+					handle.addEventListener("pointerdown", (event) => {
+						startDrag(index, trackWrap, event);
+					});
+					handle.addEventListener("keydown", (event) => {
+						const step = Number(args.step || 0.001);
+						if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+							event.preventDefault();
+							updateMarker(index, marker - step, true);
+						}
+						if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+							event.preventDefault();
+							updateMarker(index, marker + step, true);
+						}
+					});
+					trackWrap.appendChild(handle);
+				});
+
+				shell.appendChild(trackWrap);
+
+				const labelWrap = document.createElement("div");
+				labelWrap.className = "labels";
+				labelWrap.style.setProperty("--count", objectives.length);
+				labels.forEach((label, index) => {
+					const node = document.createElement("div");
+					node.className = "label";
+					node.innerHTML = `
+						<div class="label-row">
+							<span class="label-color" aria-hidden="true"></span>
+							<div class="label-name"></div>
+						</div>
+						<div class="label-weight"></div>
+					`;
+					node.querySelector(".label-color").style.background = colors[index % colors.length];
+					node.querySelector(".label-name").textContent = label;
+					const weight = weights[index] || 0;
+					node.querySelector(".label-weight").innerHTML = `${(weight * valueScale).toFixed(2)}${valueSuffix}${showPercentage ? ` <span class="label-percentage">(${(weight * 100).toFixed(1)}%)</span>` : ""}`;
+					labelWrap.appendChild(node);
+				});
+				shell.appendChild(labelWrap);
+				root.appendChild(shell);
+				setFrameHeight();
+			}
+
+			function initializeMarkers(nextArgs) {
+				const objectives = nextArgs.objectives || [];
+				const expected = Math.max(0, objectives.length - 1);
+				const incoming = Array.isArray(nextArgs.markers) ? nextArgs.markers.map(Number) : [];
+				if (incoming.length === expected) {
+					markers = sanitizeMarkers(incoming, objectives.length);
+				} else {
+					markers = equalMarkers(objectives.length);
+				}
+			}
+
+			window.addEventListener("message", (event) => {
+				if (event.data.type !== "streamlit:render") {
+					return;
+				}
+				const previousObjectives = JSON.stringify(args.objectives || []);
+				args = event.data.args || {};
+				if (JSON.stringify(args.objectives || []) !== previousObjectives || markers.length !== Math.max(0, (args.objectives || []).length - 1)) {
+					initializeMarkers(args);
+				}
+				render();
+			});
+
+			sendMessage("streamlit:componentReady", { apiVersion: 1 });
+			setFrameHeight();
+		</script>
+	</body>
+</html>

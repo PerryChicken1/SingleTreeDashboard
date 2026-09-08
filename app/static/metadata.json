@@ -1,0 +1,60 @@
+{
+  "image_dir": "images",
+  "problems": {
+    "future_crop_tree_selection": {
+      "title": "Future crop tree selection",
+      "subtitle": "Select a set of future crop trees.",
+      "image": "Future-crop-tree.png",
+      "supported": true
+    },
+    "thinning_treatment": {
+      "title": "Thinning from below",
+      "subtitle": "Remove smaller trees",
+      "image": "Thinning-from-below.png",
+      "supported": true
+    },
+    "risk_mitigation": {
+      "title": "Thinning from above",
+      "subtitle": "Remove larger trees",
+      "image": "Thinning-from-above.png",
+      "supported": true
+    }
+  },
+  "algorithms": {
+    "linear_programming": {
+      "title": "Linear programming",
+      "subtitle": "Good for transparent constraints and fast baseline solutions.",
+      "image": "Linear_programming.svg",
+      "supported": true
+    },
+    "differential_evolution": {
+      "title": "Differential evolution",
+      "subtitle": "Combines differences between candidate solutions to propose new selections.",
+      "image": "Differential-evolution.png",
+      "supported": true
+    },
+    "dual_annealing": {
+      "title": "Dual annealing",
+      "subtitle": "Stochastic global search with binary objective evaluations.",
+      "image": "Simulated-Annealing.jpg",
+      "supported": true
+    },
+    "genetic_algorithm": {
+      "title": "Genetic algorithm",
+      "subtitle": "Evolves binary selections through parent selection, crossover, and mutation.",
+      "image": "Genetic-Algorithm.jpg",
+      "supported": true
+    },
+    "reinforcement_learning": {
+      "title": "Reinforcement learning",
+      "subtitle": "Not currently supported",
+      "image": "Reinforcement-learning.png",
+      "supported": false
+    }
+  },
+  "objectives": {
+    "socialstatus": "Social status",
+    "woodquality": "Wood quality",
+    "mindbh": "Minimise DBH"
+  }
+}
