@@ -79,6 +79,38 @@ def main():
     assert other_user.session_state["gurobi_wls_secret"] == ""
     app.selectbox(key="lp_solver").select("CBC").run()
     assert not app.exception
+    app.button(key="example_basel").click().run()
+    assert not app.exception, [item.message for item in app.exception]
+    assert app.session_state["epsg_text"] == "2056"
+    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
+    assert app.session_state["column_mapping"]["x_coord"] == "X-coord. [m]"
+    assert any(item.value == "Data preview" for item in app.caption)
+    assert any("Planned attributes (WP1)" in item.value for item in app.markdown)
+    assert not any(item.label in {"Minimise DBH", "Map preview and polygon filtering"} for item in app.checkbox)
+    algorithm_keys = {item.key for item in app.button if item.key and item.key.startswith("algorithm_")}
+    assert algorithm_keys == {"algorithm_linear_programming"}
+    app.checkbox(key="objective_social_status").check().run()
+    app.button(key="run_optimisation").click().run()
+    assert not app.exception, [item.message for item in app.exception]
+    assert app.session_state["optimisation_results"]["treatment_type"] == "future_crop_tree_selection"
+    app.button(key="example_evo").click().run()
+    assert not app.exception, [item.message for item in app.exception]
+    assert app.session_state["epsg_text"] == "3067"
+    assert app.session_state["column_mapping"]["x_coord"] == "LX"
+    assert app.session_state["column_mapping"]["volume"] == "Volume"
+    assert app.session_state["column_mapping"]["social_status"] is None
+    assert app.session_state["optimisation_results"] is None
+    app.button(key="example_basel").click().run()
+    assert not app.exception, [item.message for item in app.exception]
+    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
+    assert app.session_state["column_mapping"]["volume"] is None
+    for labels in (("Not selected", "Selected"), ("Retain", "Cut")):
+        for figure in (
+            dashboard.decision_histogram(pd.Series([10., 20.]), np.array([False, True]), np.array([0., 15., 30.]), "DBH", labels),
+            dashboard.species_decision_histogram(pd.Series(["pine", "spruce"]), np.array([False, True]), labels),
+        ):
+            assert [trace.name for trace in figure.data] == list(labels)
+            assert [trace.marker.color for trace in figure.data] == ["#009E73", "#D55E00"]
     assert not (ROOT / "app/decisions.pkl").exists()
     print("PASS: standalone startup, assets, CBC multi-objective crop/thinning solves, CSV export, GeoPackage/CRS.")
 

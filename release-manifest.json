@@ -1,16 +1,16 @@
 {
-  "source_commit": "d101a95f38791cf9c9253c4f2a0fc04abc417ab6",
+  "source_commit": "2bc685a3d58debc556fefb565a30f344372337e9",
   "source": "Working-tree snapshot; may include changes beyond source_commit.",
   "sha256": {
     ".github/workflows/check-dashboard.yml": "026259a2315d9bd753e5c78fdcafa7f16f75c5b06d357216185a4bcc8cc9a89b",
     ".streamlit/config.toml": "4e3eb918d3de165e96dede36a01fc46c94e34c08f523d613258f9d22b0ef9499",
     "Constraints.py": "57edccacaafd35cd6f4a36aee59ee5439f9c0e19653a882e5fbd9cacc001ef78",
-    "Dashboard.py": "50e5518a6a44a5a51459c68ae930ce3d5dd1b3fa20144b274a56feac7ee6b9e4",
+    "Dashboard.py": "f7ed9e41222178247b8e08ddd64691af8eb4ca724acd3716c2095088c5cf1106",
     "DecisionScope.py": "ad93d7ca112d1abc8c01d3f59a7d4c3cea55e169182740ad562ddd5ef3920ab7",
     "GurobiLicense.py": "838c5756da14f902d02ae8f0de81fa8696a795c33a7575ff27eeb5d89f8f35b2",
     "Objectives.py": "a3cd9e5c74adebc263e7ddc8aa368784ea955982242a6be26e749f97f53292bc",
     "Optimiser.py": "4d602e67906bb9f9987af304611061dee585a6d54a853eac6fc9ad0ca387fbb3",
-    "README.md": "cd207b8593199d0b832736197862af712d165c470e7537f36ce46ca1817356c9",
+    "README.md": "b526bb51817fbc302011f94b5645396995fe39083952595f369fb6db5f545b16",
     "SingleTreeAlgorithms.py": "bcb6fc240f7e86c8a6644da7f387177a44e5cacea41196362da3a1e6a296b7e1",
     "SingleTreeDataset.py": "1a7d1a8be3c81279255ff5b3ced136c9c104d552fe0749f4d94b2ad810b65fa0",
     "app/components/__init__.py": "5a8a08d95ddf5a032f53db3164f9be40278a84984c941e14f9e012682067e791",
@@ -31,8 +31,11 @@
     "app/static/images/Thinning-from-above.png": "301a04fc0de7230786c90fd1f8c94c42728628eb0747f32c97be890ee546dfa0",
     "app/static/images/Thinning-from-below.png": "29c9a6a955609a78cc7c42fa209e6b963b353a916e2f72f638fa3c495ccc17e5",
     "app/static/metadata.json": "697bb28fee1a65ad2d360dba3aae06655beb361c950c902cbc7d4933b30fd043",
+    "app/static/test_datasets.json": "35eb00082c59b86a8047a7a0bc55ef22f8c5ba0983ff0cb5a68b463d4c03ec7f",
+    "data/examples/basel.csv": "4679d5b233502d55b845fc202f4bfddfad7304abf0a5b7d97c9e3ca6b4be2508",
+    "data/examples/evo.csv": "31d4806f55f7a9f96b97aab8e8b95c7056b2973931d0f708581c203b3546c49f",
     "requirements.txt": "fcd7dfdeb1dd8c187aa8e02f5264908fe665ca9b4008cb7414810e44a159fae2",
-    "smoke_test.py": "e21b4b3ef0208c1902d759a332ba841abf234e223ff14d3089726fd3d92e0f77",
+    "smoke_test.py": "3522aa50b13080827a36ae1eb7ef7286a6c7c177f4e8d24db8b7e7410486de52",
     "test_gurobi_wls.py": "1d1e2ee3cde9e7711ce903cbae9b60c9263611cf1d3d4a491581808936085f10"
   }
 }
