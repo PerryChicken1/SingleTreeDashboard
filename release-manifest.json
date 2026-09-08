@@ -32,7 +32,7 @@
     "app/static/images/Thinning-from-below.png": "29c9a6a955609a78cc7c42fa209e6b963b353a916e2f72f638fa3c495ccc17e5",
     "app/static/metadata.json": "697bb28fee1a65ad2d360dba3aae06655beb361c950c902cbc7d4933b30fd043",
     "app/static/test_datasets.json": "2efe854e4732416fa71432fae3dee59b9ec74912fbbc7160ad5235d2b59195a7",
-    "data/examples/basel.csv": "4679d5b233502d55b845fc202f4bfddfad7304abf0a5b7d97c9e3ca6b4be2508",
+    "data/examples/basel.csv": "2f56f5e627ee927976094ea1458df6e62f210348e3ef9b3a8018e24c3aabcf23",
     "data/examples/evo.csv": "31d4806f55f7a9f96b97aab8e8b95c7056b2973931d0f708581c203b3546c49f",
     "data/examples/evo_layers/Water-bodies-selected-area.cpg": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
     "data/examples/evo_layers/Water-bodies-selected-area.dbf": "ee4fef790838fcc41599a7081cbebe80d57b32ee447b3a6f4fae78c01c888692",
@@ -41,7 +41,7 @@
     "data/examples/evo_layers/Water-bodies-selected-area.shx": "e42319e4a9765bc9259b35a12c7f84e91686e8b8a1bbc16026c4968f608493cd",
     "data/examples/evo_layers/skid_roads.gpkg": "07a393833becfe5c5f885bbf87c69345188fafe8dd46dd54ce5a03ad6f3915bf",
     "requirements.txt": "fcd7dfdeb1dd8c187aa8e02f5264908fe665ca9b4008cb7414810e44a159fae2",
-    "smoke_test.py": "011853dd22cf395d638b4399f29ccf10d177e8a8863a0a30d81bc688730528db",
+    "smoke_test.py": "0b9338a3849e90902a9745160cde2126565c1853763acafde0c55d99f4637dad",
     "test_gurobi_wls.py": "1d1e2ee3cde9e7711ce903cbae9b60c9263611cf1d3d4a491581808936085f10"
   }
 }

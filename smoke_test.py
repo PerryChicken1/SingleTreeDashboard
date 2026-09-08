@@ -94,15 +94,15 @@ def main():
     assert not app.get("file_uploader")
     assert not any(item.key == "epsg_text" for item in app.text_input)
     for key, column in {
-        "id_column": "ID", "x_column": "X-coord. [m]", "y_column": "Y-coord. [m]",
-        "dbh_column": "DBH[cm]", "social_status_column": "Social status", "is_alive_column": "Alive",
+        "id_column": "Tree ID", "x_column": "X-coord. [m]", "y_column": "Y-coord. [m]",
+        "dbh_column": "DBH [cm]", "social_status_column": "Social status", "is_alive_column": "Alive",
     }.items():
         app.selectbox(key=key).select(column)
     app.run()
     assert not app.exception, [item.message for item in app.exception]
-    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
+    assert app.session_state["column_mapping"]["dbh"] == "DBH [cm]"
     app.run()
-    assert app.session_state["column_mapping"]["dbh"] == "DBH[cm]"
+    assert app.session_state["column_mapping"]["dbh"] == "DBH [cm]"
     assert any(item.value == "Data preview" for item in app.caption)
     assert any("Planned attributes (WP1)" in item.value for item in app.markdown)
     assert not any(item.label in {"Minimise DBH", "Map preview and polygon filtering"} for item in app.checkbox)
@@ -138,7 +138,7 @@ def main():
     assert app.session_state["water_shapefile_bytes"] is None
     assert app.session_state["roads_gpkg_bytes"] is None
     assert app.session_state["selected_problem"] == "future_crop_tree_selection"
-    app.selectbox(key="id_column").select("ID").run()
+    app.selectbox(key="id_column").select("Tree ID").run()
     app.button(key="example_basel").click().run()
     assert not app.exception
     assert app.selectbox(key="id_column").value == "Not set"
