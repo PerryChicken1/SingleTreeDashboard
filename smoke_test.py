@@ -145,6 +145,23 @@ def main():
     assert dashboard.read_roads_geopackage(app.session_state["roads_gpkg_bytes"]).crs.to_epsg() == 3067
     assert app.session_state["optimisation_results"] is None
     app.selectbox(key="id_column").select("ID").run()
+    for key, column in {"x_column": "LX", "y_column": "LY", "dbh_column": "DBH",
+                        "volume_column": "Volume"}.items():
+        app.selectbox(key=key).select(column)
+    app.run()
+    app.checkbox(key="objective_min_volume").check().run()
+    app.button(key="run_optimisation").click().run()
+    assert not app.exception, [item.message for item in app.exception]
+    app.checkbox(key="show_decision_map").check().run()
+    assert not app.exception, [item.message for item in app.exception]
+    for key in ("show_water_bodies_layer", "show_roads_layer"):
+        assert app.checkbox(key=key).value is True
+        app.checkbox(key=key).uncheck().run()
+        assert app.checkbox(key=key).value is False
+    app.checkbox(key="show_decision_map").uncheck().run()
+    app.checkbox(key="show_decision_map").check().run()
+    assert app.checkbox(key="show_water_bodies_layer").value is True
+    assert app.checkbox(key="show_roads_layer").value is True
     app.button(key="example_basel").click().run()
     assert not app.exception, [item.message for item in app.exception]
     assert all(value is None for value in app.session_state["column_mapping"].values())

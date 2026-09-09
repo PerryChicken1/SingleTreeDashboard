@@ -165,7 +165,6 @@ def initialize_state() -> None:
 		"objective_min_volume": False,
 		"show_map_filter": False,
 		"show_stand_boundaries_layer": True,
-		"show_water_bodies_layer": True,
 		"show_decision_map": False,
 		"show_thinning_decision_map": False,
 		"show_nearest_z_tree": False,
@@ -191,7 +190,6 @@ def initialize_state() -> None:
 		"roads_gpkg_name": None,
 		"water_buffer_distance": 10.0,
 		"road_buffer_distance": 3.0,
-		"show_roads_layer": True,
 		"stand_assignment_seed": 2026,
 		"spatial_validation": None,
 		"optimisation_stand_results": None,
@@ -481,7 +479,7 @@ def validate_buffer_decisions(dataset, result) -> None:
 
 def render_roads_layer_control(dataset) -> Optional[gpd.GeoDataFrame]:
 	road_bytes = getattr(dataset, "buffer_inputs", st.session_state).get("roads_gpkg_bytes")
-	st.checkbox("Roads and harvest buffer", key="show_roads_layer", disabled=not bool(road_bytes))
+	st.checkbox("Roads and harvest buffer", key="show_roads_layer", value=True, disabled=not bool(road_bytes))
 	return read_roads_geopackage(road_bytes) if road_bytes and st.session_state.show_roads_layer else None
 
 
@@ -1132,25 +1130,22 @@ def build_constraints(dataset: SingleTreeDataset) -> List[object]:
 	frequency_constraints = build_frequency_constraints(dataset)
 	if is_thinning_treatment():
 		constraints.extend(frequency_constraints)
+		dataset.data["CG_buffer_eligible"] = buffer_eligible_mask(dataset.data)
 		if st.session_state.constraint_min_distance:
 			constraints.append(PairwiseDistanceConstraint(
 				min_distance=st.session_state.constraint_min_distance_value,
 				applies_to=DecisionScope.NOT_SELECT,
-				exclude_col=(
-					WaterProtectionConstraint.indicator_col
-					if st.session_state.get("water_shapefile_bytes") else None
-				),
+				exclude_col="CG_buffer_eligible",
+				exclude_vals={False},
 			))
 		if st.session_state.constraint_basal_area:
-			total_basal_area = total_basal_area_per_hectare(dataset, eligible_only=True)
-			dataset.data["CG_buffer_eligible"] = buffer_eligible_mask(dataset.data)
+			total_basal_area = total_basal_area_per_hectare(dataset)
 			keep_fraction = float(np.clip(
 				st.session_state.constraint_basal_area_keep_fraction, 0.0, 1.0
 			))
 			constraints.append(BasalAreaConstraint(
 				basal_area_target=keep_fraction * total_basal_area,
 				margin=0.05 * total_basal_area,
-				eligible_col="CG_buffer_eligible",
 			))
 		if st.session_state.get("water_shapefile_bytes"):
 			constraints.append(WaterProtectionConstraint())
@@ -1815,6 +1810,7 @@ def render_stand_optimisation_results(
 			st.checkbox(
 				"Water bodies and buffer",
 				key="show_water_bodies_layer",
+				value=True,
 				disabled=not bool(water_bytes),
 				help="Overlay uploaded water bodies and the configured protection buffer.",
 			)
@@ -1948,6 +1944,7 @@ def render_optimisation_results() -> None:
 		st.checkbox(
 			"Water bodies and buffer",
 			key="show_water_bodies_layer",
+			value=True,
 			disabled=not bool(water_bytes),
 			help="Overlay uploaded water bodies and the configured protection buffer.",
 		)
@@ -2450,7 +2447,7 @@ def render_objectives_constraints_section(
 				"Minimum distance between retained trees",
 				key="constraint_min_distance",
 				help=(
-					'Set minimum spacing between retained trees, independently within each uploaded stand.\n\nRequires the `x_coord` and `y_coord` columns.'
+					'Set minimum spacing between retained trees outside water and road buffer zones, independently within each uploaded stand. Buffer-zone trees do not participate in spacing checks.\n\nRequires the `x_coord` and `y_coord` columns.'
 				),
 			)
 			if st.session_state.constraint_min_distance:
@@ -2465,7 +2462,7 @@ def render_objectives_constraints_section(
 			st.checkbox(
 				"Retained basal area", key="constraint_basal_area",
 				disabled=multi_stand or dbh_values.empty,
-				help='Set the target basal area left standing per hectare among buffer-eligible trees. Enter an EPSG code to calculate the area.\n\nNot compatible with multi-stand optimisation.\n\nRequires the `dbh`, `x_coord` and `y_coord` columns.',
+				help='Set the target basal area left standing per hectare across all trees, including water and road buffer zones. Enter an EPSG code to calculate the area.\n\nNot compatible with multi-stand optimisation.\n\nRequires the `dbh`, `x_coord` and `y_coord` columns.',
 			)
 			if st.session_state.constraint_basal_area:
 				total_basal_area = None
@@ -2480,7 +2477,7 @@ def render_objectives_constraints_section(
 						road_bytes = st.session_state.get("roads_gpkg_bytes")
 						apply_water_protection(preview_dataset, read_geometry_shapefile(water_bytes, preview_dataset.epsg) if water_bytes else None, st.session_state.water_buffer_distance)
 						apply_road_harvest(preview_dataset, read_roads_geopackage(road_bytes) if road_bytes else None, st.session_state.road_buffer_distance)
-						total_basal_area = total_basal_area_per_hectare(preview_dataset, eligible_only=True)
+						total_basal_area = total_basal_area_per_hectare(preview_dataset)
 					except Exception as exc:
 						st.warning(f"Basal area range is unavailable: {exc}")
 
