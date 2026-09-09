@@ -3,20 +3,25 @@
     "label": "Case study 1: Basel, Switzerland",
     "file": "basel.csv",
     "epsg": "2056",
-    "problem": "future_crop_tree_selection"
+    "problem": "future_crop_tree_selection",
+    "image": "case-study-therwil.png",
+    "image_alt": "Map of Switzerland marking Therwil, Basel-Landschaft"
   },
   "evo": {
     "label": "Case study 2: Evo, Finland",
-    "file": "evo.csv",
+    "file": "evo_stand_050/trees.csv",
     "epsg": "3067",
     "problem": "thinning_treatment",
-    "water_file": "evo_layers/Water-bodies-selected-area.shp",
-    "roads_file": "evo_layers/skid_roads.gpkg",
+    "water_file": "evo_stand_050/water.shp",
+    "roads_file": "evo_stand_050/roads.gpkg",
     "support_files": [
-      "evo_layers/Water-bodies-selected-area.cpg",
-      "evo_layers/Water-bodies-selected-area.dbf",
-      "evo_layers/Water-bodies-selected-area.prj",
-      "evo_layers/Water-bodies-selected-area.shx"
-    ]
+      "evo_stand_050/water.cpg",
+      "evo_stand_050/water.dbf",
+      "evo_stand_050/water.prj",
+      "evo_stand_050/water.shx",
+      "evo_stand_050/stand.gpkg"
+    ],
+    "image": "case-study-evo.png",
+    "image_alt": "Map of Finland marking Evo"
   }
 }

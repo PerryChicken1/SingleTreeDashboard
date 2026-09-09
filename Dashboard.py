@@ -2307,6 +2307,11 @@ def render_upload_section() -> Optional[pd.DataFrame]:
 		with column:
 			st.button(preset["label"], key=f"example_{key}", on_click=select_data_source,
 				args=(key,), use_container_width=True)
+			st.markdown(
+				f'<div class="case-study-map"><img src="{image_to_data_uri(IMAGE_DIR / preset["image"])}" '
+				f'alt="{html.escape(preset["image_alt"])}" /></div>',
+				unsafe_allow_html=True,
+			)
 
 	df: Optional[pd.DataFrame] = None
 	source = st.session_state.get("data_source", "upload")

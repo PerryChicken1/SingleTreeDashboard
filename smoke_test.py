@@ -28,6 +28,10 @@ def main():
         for item in metadata[section].values():
             assert (images / item["image"]).is_file(), item["image"]
     assert (images / "ST PRINCIPAL negative.png").is_file()
+    from PIL import Image
+    for preset in dashboard.TEST_DATASETS.values():
+        with Image.open(images / preset["image"]) as image:
+            assert image.size == (1200, 750)
     for name in ("objective_weight_slider", "thinning_schedule_chart", "frequency_histogram"):
         assert (ROOT / "app/components" / name / "frontend/build/index.html").is_file()
 
@@ -125,7 +129,18 @@ def main():
     assert app.session_state["water_shapefile_bytes"]
     assert app.session_state["roads_gpkg_bytes"]
     assert app.session_state["stand_shapefile_bytes"] is None
-    bundled_water = ROOT / "data/examples/evo_layers/Water-bodies-selected-area.shp"
+    preset = dashboard.TEST_DATASETS["evo"]
+    bundled_water = ROOT / "data/examples" / preset["water_file"]
+    evo_trees = pd.read_csv(ROOT / "data/examples" / preset["file"])
+    stand = gpd.read_file(ROOT / "data/examples/evo_stand_050/stand.gpkg")
+    assert len(evo_trees) == 301
+    points = gpd.GeoSeries(gpd.points_from_xy(evo_trees.LX, evo_trees.LY), crs=3067)
+    assert points.intersects(stand.geometry.iloc[0]).all()
+    water = gpd.read_file(bundled_water)
+    assert len(water) == 1 and water["id"].iloc[0] == 25837698
+    roads = dashboard.read_roads_geopackage(app.session_state["roads_gpkg_bytes"])
+    assert len(roads) == 1 and roads.trail_id.iloc[0] == 9
+    assert roads.intersects(stand.geometry.iloc[0]).all()
     assert gpd.read_file(bundled_water).crs.to_epsg() == 3067
     assert dashboard.read_roads_geopackage(app.session_state["roads_gpkg_bytes"]).crs.to_epsg() == 3067
     assert app.session_state["optimisation_results"] is None
