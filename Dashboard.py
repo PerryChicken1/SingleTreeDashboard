@@ -2165,7 +2165,7 @@ def render_spatial_treatment_inputs() -> None:
 
 def render_problem_section() -> None:
 	"""Render the silvicultural-problem selection section."""
-	st.markdown("<div class='step-title'>2. Silvicultural problem</div>", unsafe_allow_html=True)
+	st.markdown("<div class='step-title'>2. Silvicultural approach</div>", unsafe_allow_html=True)
 	st.markdown("<div class='step-card'>", unsafe_allow_html=True)
 	visible_problems = {key: PROBLEM_METADATA[key] for key in ("future_crop_tree_selection", "thinning_treatment")}
 	compatible_problem = TEST_DATASETS.get(st.session_state.get("data_source"), {}).get("problem")
