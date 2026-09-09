@@ -81,3 +81,10 @@ Community Cloud has finite memory/CPU and sleeps after inactivity. This is a
 public demo deployment, not a guarantee of capacity for large simultaneous
 optimisation runs. Data selections and results are session-based; use Download
 results for a CSV. This snapshot does not offer permanent user storage.
+# Case-study scope
+
+The Evo case study contains stand_050 (301 trees), lake Särkijärvi and synthetic
+skid road 9. The lake and road retain their full saved geometries. Water data:
+© OpenStreetMap contributors (ODbL). The two location maps use public-domain
+[Natural Earth country boundaries](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/)
+with markers derived from the case-study tree coordinates.

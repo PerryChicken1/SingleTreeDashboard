@@ -55,3 +55,6 @@ html, body, .stApp, .stApp input, .stApp textarea, .stApp button,
     .hero h1 { font-size: clamp(1.25rem, 5vw, 2rem); }
     .hero-logo { height: auto; max-height: 60px; }
 }
+
+.case-study-map { width: 100%; aspect-ratio: 8 / 5; background: white; border-radius: 14px; overflow: hidden; }
+.case-study-map img { display: block; width: 100%; height: 100%; object-fit: contain; }
